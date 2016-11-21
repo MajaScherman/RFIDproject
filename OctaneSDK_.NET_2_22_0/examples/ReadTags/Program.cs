@@ -121,15 +121,19 @@ namespace OctaneSdkExamples
             //IPアドレスとポート番号を指定
             //string型とint型なのが不思議
             //勿論送信先のIPアドレスとポート番号です
+            //The servers IP address and port to which the tag data should be sent to
             string ipAddress = "192.168.100.85";
             int port = 65000;
             //IPアドレスとポート番号を渡してサーバ側へ接続
+            //Makes this computer the client
             TcpClient client = new TcpClient(ipAddress, port);
             //NWのデータを扱うストリームを作成
             //            NetworkStream stream = client.GetStream();
+            //Creating a stream between client and server for sending information 
+            //about the tags, we want to send the same information as can be seen in the console
             int offset = 0;
             NetworkStream stream = client.GetStream();
-
+            //Writes the data to stream
             foreach (var item in list)
             {
                 byte[] tmp = Encoding.UTF8.GetBytes(item);
