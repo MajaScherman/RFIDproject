@@ -42,6 +42,7 @@ namespace OctaneSdkExamples
     {
         // The port number for the remote device.
         private const int port = 65000;//11000;
+        private Dictionary<string, int> seen_data = new Dictionary<string, int>();
 
         // ManualResetEvent instances signal completion.
         private static ManualResetEvent connectDone =
@@ -122,8 +123,20 @@ namespace OctaneSdkExamples
                 {
                     //If you want the data as below can be sent instead of only the tag data
                     //String data = "Antenna : {0}, EPC : {1} {2}" + tag.AntennaPortNumber + tag.Epc.ToHexString() + tag.PeakRssiInDbm;
-                    Send(client, tag.Epc.ToHexString());
-                    sendDone.WaitOne();
+                    String epcStr = tag.Epc.ToHexString();
+                    if (seen_data.ContainsKey(epcStr))
+                    {
+                        seen_data[epcStr]++;
+                    }
+                    else
+                    {
+                        seen_data.Add(epcStr, 0);
+                        Send(client, epcStr);
+                        sendDone.WaitOne();
+                        Console.WriteLine(epcStr);
+                        //Console.ReadKey();
+                        //Console.WriteLine("Press any key to continue");
+                    }
                 }
             }
             catch (Exception e)
@@ -254,15 +267,18 @@ namespace OctaneSdkExamples
     {
         // Create an instance of the ImpinjReader class.
         static ImpinjReader reader = new ImpinjReader();
+#if SOCKET
         static AsynchronousClient ac = new AsynchronousClient();
-
+#endif
 
         static void Main(string[] args)
         {
             try
             {
                 //Starts the client
+#if SOCKET
                 ac.StartC();
+#endif
                 // Connect to the reader.
                 // Change the ReaderHostname constant in SolutionConstants.cs 
                 // to the IP address or hostname of your reader.
@@ -298,7 +314,7 @@ namespace OctaneSdkExamples
                 settings.Antennas.GetAntenna(1).MaxTxPower = true;
                 settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
                 // You can also set them to specific values like this...
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 23;
                 //settings.Antennas.GetAntenna(1).RxSensitivityInDbm = -70;
 
                 // Apply the newly modified settings.
@@ -323,8 +339,9 @@ namespace OctaneSdkExamples
                 // Disconnect from the reader.
                 reader.Disconnect();
                 //TODO correct placement
+#if SOCKET
                 ac.CloseClient();
-
+#endif
             }
             catch (OctaneSdkException e)
             {
@@ -340,9 +357,19 @@ namespace OctaneSdkExamples
 
         static void OnTagsReported(ImpinjReader sender, TagReport report)
         {
-           //Sends the report to the client which sends it to the server
+            //Sends the report to the client which sends it to the server
+#if SOCKET
             ac.ClientSend(report);
-           
+#else
+            // Send test data to the remote device.
+            foreach (Tag tag in report)
+            {
+                //If you want the data as below can be sent instead of only the tag data
+                Console.WriteLine("Antenna : {0}, EPC : {1} {2}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm);
+             
+            }
+#endif
+
         }
 
     }

@@ -66,7 +66,15 @@ namespace OctaneSdkExamples
             //            writeEpc.Data = TagData.FromHexString(newEpc);
             //writeEpc.Data = TagData.FromHexString("415543313041303031313631");
             //            writeEpc.Data = TagData.FromHexString("525543313041303031313631");
-            writeEpc.Data = TagData.FromHexString("52554e303542443032323031");
+            string inStr = "RFB13CB15201";
+            string outStr = "";
+            foreach (char c in inStr)
+            {
+                int intVal = Convert.ToInt32(c);
+                outStr += String.Format("{0:X2}", intVal);
+            }
+            Console.WriteLine(outStr);
+            writeEpc.Data = TagData.FromHexString(outStr);
             // Starting writing at word 2 (word 0 = CRC, word 1 = PC bits)
             writeEpc.WordPointer = WordPointers.Epc;
             //writeEpc.WordPointer = 0x23;
@@ -130,7 +138,7 @@ namespace OctaneSdkExamples
                 // and then modify the settings we're 
                 // interested in.
                 Settings settings = reader.QueryDefaultSettings();
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 25;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
                 // Tell the reader to include the Protocol Control 
                 // bits in all tag reports. We will need to modify 
                 // the PC bits if we change the length of the EPC. 
