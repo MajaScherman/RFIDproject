@@ -3,29 +3,266 @@
 //    Read Tags
 //
 ////////////////////////////////////////////////////////////////////////////////
-
+#define SOCKET
 using System;
 using Impinj.OctaneSdk;
 
 //Add from here
 using System.Collections.Generic;
 using System.Text;
-using System.Net.Sockets;　　//System.Netの参照設定が必要です
+//using System.Net.Sockets;　　//System.Netの参照設定が必要です
+
+//using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+//using System.Text;
 //up to here 
+
 
 namespace OctaneSdkExamples
 {
+#if SOCKET
+
+
+    // State object for receiving data from remote device.
+    public class StateObject
+    {
+        // Client socket.
+        public Socket workSocket = null;
+        // Size of receive buffer.
+        public const int BufferSize = 256;
+        // Receive buffer.
+        public byte[] buffer = new byte[BufferSize];
+        // Received data string.
+        public StringBuilder sb = new StringBuilder();
+    }
+
+    public class AsynchronousClient
+    {
+        // The port number for the remote device.
+        private const int port = 65000;//11000;
+
+        // ManualResetEvent instances signal completion.
+        private static ManualResetEvent connectDone =
+            new ManualResetEvent(false);
+        private static ManualResetEvent sendDone =
+            new ManualResetEvent(false);
+        private static ManualResetEvent receiveDone =
+            new ManualResetEvent(false);
+        // Create a TCP/IP socket.
+        private Socket client = new Socket(AddressFamily.InterNetwork,
+                SocketType.Stream, ProtocolType.Tcp);
+
+        // The response from the remote device.
+        private static String response = String.Empty;
+
+        public AsynchronousClient()
+        {
+
+
+        }
+        public void StartC()
+        {
+            try
+            {
+
+            
+            // Establish the remote endpoint for the socket.
+            // The name of the 
+            // remote device is "host.contoso.com".
+            //IPHostEntry ipHostInfo = Dns.Resolve("host.contoso.com");
+
+            IPAddress ipAddress = System.Net.IPAddress.Parse("192.168.100.85");//ipHostInfo.AddressList[0];
+            IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
+
+
+
+            // Connect to the remote endpoint.
+            client.BeginConnect(remoteEP,
+                new AsyncCallback(ConnectCallback), client);
+            connectDone.WaitOne();
+
+            //StartClient(client, report, remoteEP);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+
+
+        }
+        public void CloseClient()
+        {
+            try
+            {
+                // Receive the response from the remote device.
+                Receive(client);
+                receiveDone.WaitOne();
+
+                // Write the response to the console.
+                Console.WriteLine("Response received : {0}", response);
+
+                client.Shutdown(SocketShutdown.Both);
+                client.Close();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        public void ClientSend(TagReport report)
+        {
+            // Sends the data from the report
+            try
+            {
+                // Send test data to the remote device.
+                foreach (Tag tag in report)
+                {
+                    //If you want the data as below can be sent instead of only the tag data
+                    //String data = "Antenna : {0}, EPC : {1} {2}" + tag.AntennaPortNumber + tag.Epc.ToHexString() + tag.PeakRssiInDbm;
+                    Send(client, tag.Epc.ToHexString());
+                    sendDone.WaitOne();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+
+        private static void ConnectCallback(IAsyncResult ar)
+        {
+            try
+            {
+                // Retrieve the socket from the state object.
+                Socket client = (Socket)ar.AsyncState;
+
+                // Complete the connection.
+                client.EndConnect(ar);
+
+                Console.WriteLine("Socket connected to {0}",
+                    client.RemoteEndPoint.ToString());
+
+                // Signal that the connection has been made.
+                connectDone.Set();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private static void Receive(Socket client)
+        {
+            try
+            {
+                // Create the state object.
+                StateObject state = new StateObject();
+                state.workSocket = client;
+
+                // Begin receiving the data from the remote device.
+                client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                    new AsyncCallback(ReceiveCallback), state);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private static void ReceiveCallback(IAsyncResult ar)
+        {
+            try
+            {
+                // Retrieve the state object and the client socket 
+                // from the asynchronous state object.
+                StateObject state = (StateObject)ar.AsyncState;
+                Socket client = state.workSocket;
+
+                // Read data from the remote device.
+                int bytesRead = client.EndReceive(ar);
+
+                if (bytesRead > 0)
+                {
+                    // There might be more data, so store the data received so far.
+                    state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
+
+                    // Get the rest of the data.
+                    client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReceiveCallback), state);
+                }
+                else
+                {
+                    // All the data has arrived; put it in response.
+                    if (state.sb.Length > 1)
+                    {
+                        response = state.sb.ToString();
+                    }
+                    // Signal that all bytes have been received.
+                    receiveDone.Set();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private static void Send(Socket client, String data)
+        {
+            // Convert the string data to byte data using ASCII encoding.
+            byte[] byteData = Encoding.ASCII.GetBytes(data);
+
+            // Begin sending the data to the remote device.
+            client.BeginSend(byteData, 0, byteData.Length, 0,
+                new AsyncCallback(SendCallback), client);
+        }
+
+        private static void SendCallback(IAsyncResult ar)
+        {
+            try
+            {
+                // Retrieve the socket from the state object.
+                Socket client = (Socket)ar.AsyncState;
+
+                // Complete sending the data to the remote device.
+                int bytesSent = client.EndSend(ar);
+                Console.WriteLine("Sent {0} bytes to server.", bytesSent);
+
+                // Signal that all bytes have been sent.
+                sendDone.Set();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+
+    }
+
+#endif
+
+
+
+
+
     class Program
     {
         // Create an instance of the ImpinjReader class.
         static ImpinjReader reader = new ImpinjReader();
+        static AsynchronousClient ac = new AsynchronousClient();
 
 
         static void Main(string[] args)
         {
             try
             {
-
+                //Starts the client
+                ac.StartC();
                 // Connect to the reader.
                 // Change the ReaderHostname constant in SolutionConstants.cs 
                 // to the IP address or hostname of your reader.
@@ -72,6 +309,7 @@ namespace OctaneSdkExamples
                 // when tags reports are available.
                 reader.TagsReported += OnTagsReported;
 
+
                 // Start reading.
                 reader.Start();
 
@@ -84,6 +322,9 @@ namespace OctaneSdkExamples
 
                 // Disconnect from the reader.
                 reader.Disconnect();
+                //TODO correct placement
+                ac.CloseClient();
+
             }
             catch (OctaneSdkException e)
             {
@@ -99,54 +340,10 @@ namespace OctaneSdkExamples
 
         static void OnTagsReported(ImpinjReader sender, TagReport report)
         {
-            //Add from here
-            // This event handler is called asynchronously 
-            // when tag reports are available.
-            // Loop through each tag in the report 
-            // and print the data.
-            var list = new List<string>();
-            foreach (Tag tag in report)
-            {
-                string str = tag.Epc.ToHexString();
-                list.Add(str);
-
-                //if (tag.Epc.ToHexString() == "52554E303542443032323031")
-                //{
-                Console.WriteLine("Antenna : {0}, EPC : {1} {2}",
-                                      tag.AntennaPortNumber, tag.Epc.ToHexString(), tag.PeakRssiInDbm);
-                //}                
-            }
-#if SOCKET
-            //Add from here
-            //IPアドレスとポート番号を指定
-            //string型とint型なのが不思議
-            //勿論送信先のIPアドレスとポート番号です
-            //The servers IP address and port to which the tag data should be sent to
-            string ipAddress = "192.168.100.85";
-            int port = 65000;
-            //IPアドレスとポート番号を渡してサーバ側へ接続
-            //Makes this computer the client
-            TcpClient client = new TcpClient(ipAddress, port);
-            //NWのデータを扱うストリームを作成
-            //            NetworkStream stream = client.GetStream();
-            //Creating a stream between client and server for sending information 
-            //about the tags, we want to send the same information as can be seen in the console
-            int offset = 0;
-            NetworkStream stream = client.GetStream();
-            //Writes the data to stream
-            foreach (var item in list)
-            {
-                byte[] tmp = Encoding.UTF8.GetBytes(item);
-                stream.Write(tmp, offset, tmp.Length);
-//                stream.Write(tmp, 0, tmp.Length);
-                offset += tmp.Length;
-                System.Threading.Thread.Sleep(10000);
-//                stream.Close();
-            }
-            //サーバとの接続を終了
-            client.Close();
-            //Add up to here
-#endif
+           //Sends the report to the client which sends it to the server
+            ac.ClientSend(report);
+           
         }
+
     }
 }
