@@ -16,6 +16,9 @@ namespace OctaneSdkExamples
 
         const ushort EPC_OP_ID = 123;
         const ushort PC_BITS_OP_ID = 321;
+        static Tag lastTag;
+        static int tagSeq = 0;
+        static String[] ascList = new String[] { "WSW140035101", "WSW140035102", "WSW140035103", "WSW140035104" };
 
         static Random random = new Random((int) DateTime.Now.Ticks);
 
@@ -29,6 +32,49 @@ namespace OctaneSdkExamples
                 epc += random.Next(0, ushort.MaxValue + 1).ToString("X4");
             
             return epc;
+        }
+
+        static string GetWriteEpc()
+        {
+
+            string epc = "";
+            string asc = ascList[tagSeq];
+            foreach (char c in asc)
+            {
+                int intVal = Convert.ToInt32(c);
+                epc += String.Format("{0:X2}", intVal);
+            }
+            Console.WriteLine(epc);
+            return epc;
+        }
+
+        static string GetCSVEpc()
+        {
+            try
+            {
+                using (var sr = new System.IO.StreamReader(@"test.csv"))
+                {
+                    ascList.Initialize();
+                    for (int i = 0; !sr.EndOfStream; i++)
+                    {
+                        var line = sr.ReadLine();
+                        var values = line.Split(',');
+                        System.Console.Write("Add {0} from csv\n", values[0]);
+                        ascList[i] = values[0];
+                    }
+                }
+            }
+            catch (OctaneSdkException e)
+            {
+                // Handle Octane SDK errors.
+                Console.WriteLine("Octane SDK exception: {0}", e.Message);
+            }
+            catch (Exception e)
+            {
+                // Handle other .NET errors.
+                Console.WriteLine("Exception : {0}", e.Message);
+            }
+            return null;
         }
 
         static void ProgramEpc(string currentEpc, ushort currentPcBits, string newEpc)
@@ -63,18 +109,9 @@ namespace OctaneSdkExamples
             // Write to EPC memory
             writeEpc.MemoryBank = MemoryBank.Epc;
             // Specify the new EPC data
-            //            writeEpc.Data = TagData.FromHexString(newEpc);
+            writeEpc.Data = TagData.FromHexString(newEpc);
             //writeEpc.Data = TagData.FromHexString("415543313041303031313631");
             //            writeEpc.Data = TagData.FromHexString("525543313041303031313631");
-            string inStr = "RFB13CB15201";
-            string outStr = "";
-            foreach (char c in inStr)
-            {
-                int intVal = Convert.ToInt32(c);
-                outStr += String.Format("{0:X2}", intVal);
-            }
-            Console.WriteLine(outStr);
-            writeEpc.Data = TagData.FromHexString(outStr);
             // Starting writing at word 2 (word 0 = CRC, word 1 = PC bits)
             writeEpc.WordPointer = WordPointers.Epc;
             //writeEpc.WordPointer = 0x23;
@@ -116,6 +153,14 @@ namespace OctaneSdkExamples
 
         static void Main(string[] args)
         {
+            GetCSVEpc();
+            Console.WriteLine("Press any key to write following EPCs");
+            foreach (String i in ascList)
+            {
+                Console.WriteLine(i);
+            }
+            Console.ReadLine();
+
             try
             {
                 // Connect to the reader.
@@ -126,12 +171,12 @@ namespace OctaneSdkExamples
                 // Assign the TagsReported event handler.
                 // This specifies which method to call
                 // when tags reports are available.
-                reader.TagsReported += OnTagsReported;
+                //reader.TagsReported += OnTagsReported;
 
                 // Assign the TagOpComplete event handler.
                 // This specifies which method to call
                 // when tag operations are complete.
-                reader.TagOpComplete += OnTagOpComplete;
+                //reader.TagOpComplete += OnTagOpComplete;
 
                 // Get the default settings
                 // We'll use these as a starting point
@@ -152,15 +197,19 @@ namespace OctaneSdkExamples
                 reader.ApplySettings(settings);
 
                 // Start the reader
-                reader.Start();
+                foreach (string i in ascList)
+                {
+                    reader.TagsReported += OnTagsReported;
+                    reader.TagOpComplete += OnTagOpComplete;
 
-                // Wait for the user to press enter.
-                Console.WriteLine("Press enter to exit.");
-                Console.ReadLine();
+                    reader.Start();
+                    // Wait for the user to press enter.
+                    Console.WriteLine("Write " + i);
+                    Console.ReadLine();
 
-                // Stop reading.
-                reader.Stop();
-
+                    // Stop reading.
+                    reader.Stop();
+                }
                 // Disconnect from the reader.
                 reader.Disconnect();
             }
@@ -187,13 +236,16 @@ namespace OctaneSdkExamples
 
             // Change the EPC of the first tag we read to a random value.
             Tag tag = report.Tags[0];
-            ProgramEpc(tag.Epc.ToHexString(), tag.PcBits, GetRandomEpc());
+            lastTag = tag; 
+            ProgramEpc(tag.Epc.ToHexString(), tag.PcBits, GetWriteEpc());
         }
         
         // This event handler will be called when tag 
         // operations have been executed by the reader.
         static void OnTagOpComplete(ImpinjReader reader, TagOpReport report)
         {
+            reader.TagOpComplete -= OnTagOpComplete;
+
             // Loop through all the completed tag operations.
             foreach (TagOpResult result in report)
             {
@@ -203,10 +255,30 @@ namespace OctaneSdkExamples
                     // Cast it to the correct type.
                     TagWriteOpResult writeResult = result as TagWriteOpResult;
                     if (writeResult.OpId == EPC_OP_ID)
+                    {
                         Console.WriteLine("Write to EPC complete : {0}", writeResult.Result);
+                        if (writeResult.Result.ToString() != "Success")
+                        {
+//                            Console.WriteLine("Press enter to continue.");
+//                            Console.ReadLine();
+                            reader.TagsReported += OnTagsReported;
+                            Tag tag = lastTag;
+                            ProgramEpc(tag.Epc.ToHexString(), tag.PcBits, GetWriteEpc());
+                        }
+                        else
+                        {
+                            if (ascList.Length - 1 > tagSeq)
+                            {
+                                tagSeq++;
+                            }
+
+                        }
+                    }
                     else if (writeResult.OpId == PC_BITS_OP_ID)
+                    {
                         Console.WriteLine("Write to PC bits complete : {0}", writeResult.Result);
-                    
+                    }
+
                     // Print out the number of words written
                     Console.WriteLine("Number of words written : {0}", writeResult.NumWordsWritten);
                 }

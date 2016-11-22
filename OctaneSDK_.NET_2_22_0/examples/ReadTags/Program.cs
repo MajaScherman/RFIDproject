@@ -296,6 +296,7 @@ namespace OctaneSdkExamples
                 // appropriate Report.IncludeXXXXXXX property.
                 settings.Report.IncludeAntennaPortNumber = true;
                 settings.Report.IncludePeakRssi = true;
+                settings.Report.IncludeLastSeenTime = true;
 
                 // The reader can be set into various modes in which reader
                 // dynamics are optimized for specific regions and environments.
@@ -314,7 +315,7 @@ namespace OctaneSdkExamples
                 settings.Antennas.GetAntenna(1).MaxTxPower = true;
                 settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
                 // You can also set them to specific values like this...
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 23;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 26;
                 //settings.Antennas.GetAntenna(1).RxSensitivityInDbm = -70;
 
                 // Apply the newly modified settings.
@@ -365,7 +366,7 @@ namespace OctaneSdkExamples
             foreach (Tag tag in report)
             {
                 //If you want the data as below can be sent instead of only the tag data
-                Console.WriteLine("Antenna : {0}, EPC : {1} {2}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm);
+                Console.WriteLine("Antenna : {0}, EPC : {1} {2} {3}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime);
              
             }
 #endif
