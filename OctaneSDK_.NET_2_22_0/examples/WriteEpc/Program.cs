@@ -183,7 +183,7 @@ namespace OctaneSdkExamples
                 // and then modify the settings we're 
                 // interested in.
                 Settings settings = reader.QueryDefaultSettings();
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 23;
                 // Tell the reader to include the Protocol Control 
                 // bits in all tag reports. We will need to modify 
                 // the PC bits if we change the length of the EPC. 
@@ -262,6 +262,7 @@ namespace OctaneSdkExamples
 //                            Console.WriteLine("Press enter to continue.");
 //                            Console.ReadLine();
                             reader.TagsReported += OnTagsReported;
+                            reader.TagOpComplete += OnTagOpComplete;
                             Tag tag = lastTag;
                             ProgramEpc(tag.Epc.ToHexString(), tag.PcBits, GetWriteEpc());
                         }

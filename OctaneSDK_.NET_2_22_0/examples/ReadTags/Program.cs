@@ -3,7 +3,7 @@
 //    Read Tags
 //
 ////////////////////////////////////////////////////////////////////////////////
-#define SOCKET
+//#define SOCKET
 using System;
 using Impinj.OctaneSdk;
 
@@ -267,6 +267,8 @@ namespace OctaneSdkExamples
     {
         // Create an instance of the ImpinjReader class.
         static ImpinjReader reader = new ImpinjReader();
+        static private Dictionary<string, int> seen_data = new Dictionary<string, int>();//
+
 #if SOCKET
         static AsynchronousClient ac = new AsynchronousClient();
 #endif
@@ -366,8 +368,28 @@ namespace OctaneSdkExamples
             foreach (Tag tag in report)
             {
                 //If you want the data as below can be sent instead of only the tag data
-                Console.WriteLine("Antenna : {0}, EPC : {1} {2} {3}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime);
-             
+                String epcStr = tag.Epc.ToHexString();
+
+                //                Console.WriteLine("Antenna : {0}, EPC : {1} {2} {3}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime);
+                if (seen_data.ContainsKey(epcStr))
+                {
+                    seen_data[epcStr]++;
+                }
+                else
+                {
+                    seen_data.Add(epcStr, 0);
+                    //Console.ReadKey();
+                    //Console.WriteLine("Press any key to continue");
+
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < epcStr.Length; i += 2)
+                    {
+                        string hs = epcStr.Substring(i, 2);
+                        sb.Append(Convert.ToChar(Convert.ToUInt32(hs, 16)));
+                    }
+                    String ascii = sb.ToString();
+                    Console.WriteLine("{0}", ascii);
+                }
             }
 #endif
 
