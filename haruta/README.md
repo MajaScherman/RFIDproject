@@ -55,6 +55,10 @@ After that, please download fixed_db.csv and copy data to table by the following
 wine=# COPY table FROM '/path/to/fixed_db.csv' WITH CSV
 
 You are ready to use server.py. (Maybe)
+For python module installation, please execute the following command. 
+
+$pip install psycopg2
+
 Finally, in the server.py, please change 'psyconfig' and 'host' according to your environment.
 
 ## Contribution
