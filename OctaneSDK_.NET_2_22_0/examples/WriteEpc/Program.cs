@@ -262,6 +262,7 @@ namespace OctaneSdkExamples
 //                            Console.WriteLine("Press enter to continue.");
 //                            Console.ReadLine();
                             reader.TagsReported += OnTagsReported;
+
                             reader.TagOpComplete += OnTagOpComplete;
                             Tag tag = lastTag;
                             ProgramEpc(tag.Epc.ToHexString(), tag.PcBits, GetWriteEpc());
