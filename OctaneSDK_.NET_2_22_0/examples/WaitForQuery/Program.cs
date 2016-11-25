@@ -39,6 +39,7 @@ namespace OctaneSdkExamples
                 // Tell the reader not to send tag reports.
                 // We will ask for them.
                 settings.Report.Mode = ReportMode.WaitForQuery;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 26;
 
                 // Apply the newly modified settings.
                 reader.ApplySettings(settings);
@@ -58,19 +59,23 @@ namespace OctaneSdkExamples
 
                 // Start reading.
                 reader.Start();
+                while (true)
+                {
+                    // Wait a while.
+                    Console.WriteLine("Waiting while the reader reads tags.");
 
-                // Wait a while.
-                Console.WriteLine("Waiting while the reader reads tags.");
-                Thread.Sleep(5000);
+                    Thread.Sleep(1000);
+                    // Ask for the tag reports.
+                    Console.WriteLine("Press any key to show the report");
+                    Console.ReadKey();
+                    reader.QueryTags();
 
-                // Ask for the tag reports.
-                reader.QueryTags();
+                    // Wait for the user to press enter.
+//                    Console.WriteLine("Press enter to exit.");
+//                    Console.ReadLine();
 
-                // Wait for the user to press enter.
-                Console.WriteLine("Press enter to exit.");
-                Console.ReadLine();
-
-                // Stop reading.
+                    // Stop reading.
+                }
                 reader.Stop();
 
                 // Disconnect from the reader.

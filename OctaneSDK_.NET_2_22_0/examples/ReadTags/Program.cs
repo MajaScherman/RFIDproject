@@ -4,6 +4,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //#define SOCKET
+//#define RECORDEPC
 using System;
 using Impinj.OctaneSdk;
 
@@ -299,6 +300,7 @@ namespace OctaneSdkExamples
                 settings.Report.IncludeAntennaPortNumber = true;
                 settings.Report.IncludePeakRssi = true;
                 settings.Report.IncludeLastSeenTime = true;
+                settings.Report.IncludePhaseAngle = true;
 
                 // The reader can be set into various modes in which reader
                 // dynamics are optimized for specific regions and environments.
@@ -306,6 +308,7 @@ namespace OctaneSdkExamples
                 // and continuously optimizes the reader’s configuration
                 settings.ReaderMode = ReaderMode.AutoSetDenseReader;
                 settings.SearchMode = SearchMode.DualTarget;
+                //settings.SearchMode = SearchMode.SingleTarget;
                 settings.Session = 2;
 
                 // Enable antenna #1. Disable all others.
@@ -317,9 +320,9 @@ namespace OctaneSdkExamples
                 settings.Antennas.GetAntenna(1).MaxTxPower = true;
                 settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
                 // You can also set them to specific values like this...
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 26;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
                 //settings.Antennas.GetAntenna(1).RxSensitivityInDbm = -70;
-
+                
                 // Apply the newly modified settings.
                 reader.ApplySettings(settings);
 
@@ -367,10 +370,9 @@ namespace OctaneSdkExamples
             // Send test data to the remote device.
             foreach (Tag tag in report)
             {
-                //If you want the data as below can be sent instead of only the tag data
+#if RECORDEPC
                 String epcStr = tag.Epc.ToHexString();
 
-                //                Console.WriteLine("Antenna : {0}, EPC : {1} {2} {3}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime);
                 if (seen_data.ContainsKey(epcStr))
                 {
                     seen_data[epcStr]++;
@@ -378,9 +380,6 @@ namespace OctaneSdkExamples
                 else
                 {
                     seen_data.Add(epcStr, 0);
-                    //Console.ReadKey();
-                    //Console.WriteLine("Press any key to continue");
-
                     StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < epcStr.Length; i += 2)
                     {
@@ -389,11 +388,21 @@ namespace OctaneSdkExamples
                     }
                     String ascii = sb.ToString();
                     Console.WriteLine("{0}", ascii);
+
+
+                Console.ReadKey();
+                    Console.WriteLine("Press any key to continue");
                 }
+
+                //If you want the data as below can be sent instead of only the tag data
+
+#else
+                Console.WriteLine("Antenna : {0},EPC : {1},{2},{3},{4}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime, tag.PhaseAngleInRadians);
+#endif
             }
 #endif
 
-        }
+            }
 
-    }
+        }
 }

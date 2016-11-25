@@ -23,7 +23,7 @@ namespace OctaneSdkExamples
                 readers.Add(new ImpinjReader(SolutionConstants.ReaderHostname, "Reader #1"));
                 // Change "SpeedwayR-10-27-52" to the IP address 
                 // or hostname of the second reader.
-                readers.Add(new ImpinjReader("SpeedwayR-10-27-52", "Reader #2"));
+                readers.Add(new ImpinjReader("169.254.1.1", "Reader #2"));
 
                 // Loop through the List of readers to configure and start them.
                 foreach (ImpinjReader reader in readers)
@@ -77,14 +77,22 @@ namespace OctaneSdkExamples
 
         static void OnTagsReported(ImpinjReader sender, TagReport report)
         {
-            // This event handler is called asynchronously 
-            // when tag reports are available.
-            // Loop through each tag in the report 
-            // and print the data.
-            foreach (Tag tag in report)
+            foreach (ImpinjReader reader in readers)
+            {
+                if (reader.Address == sender.Address)
+                {
+                    reader.TagsReported -= OnTagsReported;
+                }
+            }
+                // This event handler is called asynchronously 
+                // when tag reports are available.
+                // Loop through each tag in the report 
+                // and print the data.
+                foreach (Tag tag in report)
             {
                 Console.WriteLine("{0} ({1}) : {2}",
                                     sender.Name, sender.Address, tag.Epc);
+
             }
         }
     }

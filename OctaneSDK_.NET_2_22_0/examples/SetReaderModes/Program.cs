@@ -38,7 +38,8 @@ namespace OctaneSdkExamples
                 // Set the Reader Mode, Search Mode, Session
                 // and Tag Population Estimate.
                 settings.ReaderMode = ReaderMode.AutoSetDenseReader;
-                settings.SearchMode = SearchMode.DualTarget;
+                //                settings.SearchMode = SearchMode.DualTarget;
+                settings.SearchMode = SearchMode.SingleTarget;
                 settings.Session = 2;
                 settings.TagPopulationEstimate = 32;
 
