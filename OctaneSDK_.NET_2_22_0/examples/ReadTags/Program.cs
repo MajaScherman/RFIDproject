@@ -3,7 +3,7 @@
 //    Read Tags
 //
 ////////////////////////////////////////////////////////////////////////////////
-//#define SOCKET
+#define SOCKET
 //#define RECORDEPC
 using System;
 using Impinj.OctaneSdk;
@@ -43,7 +43,7 @@ namespace OctaneSdkExamples
     {
         // The port number for the remote device.
         private const int port = 65000;//11000;
-        private Dictionary<string, int> seen_data = new Dictionary<string, int>();
+        private Dictionary<string, DateTime> seen_data = new Dictionary<string, DateTime>();
 
         // ManualResetEvent instances signal completion.
         private static ManualResetEvent connectDone =
@@ -75,7 +75,7 @@ namespace OctaneSdkExamples
             // remote device is "host.contoso.com".
             //IPHostEntry ipHostInfo = Dns.Resolve("host.contoso.com");
 
-            IPAddress ipAddress = System.Net.IPAddress.Parse("192.168.100.85");//ipHostInfo.AddressList[0];
+            IPAddress ipAddress = System.Net.IPAddress.Parse("192.168.100.82");//ipHostInfo.AddressList[0];
             IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
 
 
@@ -125,13 +125,27 @@ namespace OctaneSdkExamples
                     //If you want the data as below can be sent instead of only the tag data
                     //String data = "Antenna : {0}, EPC : {1} {2}" + tag.AntennaPortNumber + tag.Epc.ToHexString() + tag.PeakRssiInDbm;
                     String epcStr = tag.Epc.ToHexString();
+                  
                     if (seen_data.ContainsKey(epcStr))
                     {
-                        seen_data[epcStr]++;
+                        DateTime seen_time = tag.LastSeenTime.LocalDateTime;
+ //                       Console.Write("seentime {0}", seen_time);
+                        int compTime = seen_time.CompareTo(seen_data[epcStr]);
+                        if (compTime > 0) 
+                        {
+                            Send(client, epcStr);
+                            sendDone.WaitOne();
+                            Console.WriteLine(epcStr);
+                        }
+                        if (tag.PeakRssiInDbm > -60.0)
+                        {
+                            DateTime Timeout = tag.LastSeenTime.LocalDateTime.AddSeconds(5);
+                            seen_data[epcStr] = Timeout;
+                        }
                     }
                     else
                     {
-                        seen_data.Add(epcStr, 0);
+                        seen_data.Add(epcStr, tag.LastSeenTime.LocalDateTime);
                         Send(client, epcStr);
                         sendDone.WaitOne();
                         Console.WriteLine(epcStr);
@@ -268,7 +282,7 @@ namespace OctaneSdkExamples
     {
         // Create an instance of the ImpinjReader class.
         static ImpinjReader reader = new ImpinjReader();
-        static private Dictionary<string, int> seen_data = new Dictionary<string, int>();//
+        static private Dictionary<string, DateTime> seen_data = new Dictionary<string, DateTime>();//
 
 #if SOCKET
         static AsynchronousClient ac = new AsynchronousClient();
@@ -307,9 +321,10 @@ namespace OctaneSdkExamples
                 // The following mode, AutoSetDenseReader, monitors RF noise and interference and then automatically
                 // and continuously optimizes the reader’s configuration
                 settings.ReaderMode = ReaderMode.AutoSetDenseReader;
-                settings.SearchMode = SearchMode.DualTarget;
-                //settings.SearchMode = SearchMode.SingleTarget;
-                settings.Session = 2;
+                //settings.SearchMode = SearchMode.DualTarget;
+                settings.SearchMode = SearchMode.SingleTarget;
+                //settings.SearchMode = SearchMode.TagFocus;
+                settings.Session = 0;
 
                 // Enable antenna #1. Disable all others.
                 settings.Antennas.DisableAll();
@@ -320,7 +335,7 @@ namespace OctaneSdkExamples
                 settings.Antennas.GetAntenna(1).MaxTxPower = true;
                 settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
                 // You can also set them to specific values like this...
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
+//                settings.Antennas.GetAntenna(1).TxPowerInDbm = 26;
                 //settings.Antennas.GetAntenna(1).RxSensitivityInDbm = -70;
                 
                 // Apply the newly modified settings.
@@ -397,7 +412,32 @@ namespace OctaneSdkExamples
                 //If you want the data as below can be sent instead of only the tag data
 
 #else
-                Console.WriteLine("Antenna : {0},EPC : {1},{2},{3},{4}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime, tag.PhaseAngleInRadians);
+/*
+                String epcStr = tag.Epc.ToHexString();
+                if (seen_data.ContainsKey(epcStr))
+                {
+                    DateTime seen_time = tag.LastSeenTime.LocalDateTime;
+                    Console.Write("seentime {0}", seen_time.ToString());
+                    int compTime = seen_time.CompareTo(seen_data[epcStr]);
+                    Console.WriteLine("Compare {0} and {1}. Result {2}", seen_time.ToString(), seen_data[epcStr].ToString(), compTime);
+                    if (compTime > 0)
+                    {
+                        Console.WriteLine("Write {0}", epcStr);
+                    }
+                    DateTime Timeout = tag.LastSeenTime.LocalDateTime.AddSeconds(10);
+                    seen_data[epcStr] = Timeout;
+                    Console.WriteLine("Timeout {0}", Timeout.ToString());
+                }
+                else
+                {
+                    seen_data.Add(epcStr, tag.LastSeenTime.LocalDateTime);
+                    Console.WriteLine(epcStr);
+                    //Console.ReadKey();
+                    //Console.WriteLine("Press any key to continue");
+                }
+                */
+                Console.WriteLine("Antenna : {0},EPC : {1},{2}", tag.AntennaPortNumber, tag.Epc.ToHexString(), tag.PeakRssiInDbm);
+                //               Console.WriteLine("Antenna : {0},EPC : {1},{2},{3},{4}" , tag.AntennaPortNumber , tag.Epc.ToHexString() , tag.PeakRssiInDbm, tag.LastSeenTime, tag.PhaseAngleInRadians);
 #endif
             }
 #endif

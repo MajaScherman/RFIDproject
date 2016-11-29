@@ -6,6 +6,7 @@
 
 using System;
 using Impinj.OctaneSdk;
+using System.Collections.Generic;
 
 namespace OctaneSdkExamples
 {
@@ -18,7 +19,8 @@ namespace OctaneSdkExamples
         const ushort PC_BITS_OP_ID = 321;
         static Tag lastTag;
         static int tagSeq = 0;
-        static String[] ascList = new String[] { "WSW140035101", "WSW140035102", "WSW140035103", "WSW140035104" };
+        static string[] input_epc = {"RUN05BD02201"};
+        static List<string> ascList = new List<string>(input_epc);
 
         static Random random = new Random((int) DateTime.Now.Ticks);
 
@@ -54,13 +56,14 @@ namespace OctaneSdkExamples
             {
                 using (var sr = new System.IO.StreamReader(@"test.csv"))
                 {
-                    ascList.Initialize();
+                    ascList.Clear();
                     for (int i = 0; !sr.EndOfStream; i++)
                     {
                         var line = sr.ReadLine();
                         var values = line.Split(',');
                         System.Console.Write("Add {0} from csv\n", values[0]);
                         ascList[i] = values[0];
+                        ascList.Add(values[0]);
                     }
                 }
             }
@@ -183,7 +186,7 @@ namespace OctaneSdkExamples
                 // and then modify the settings we're 
                 // interested in.
                 Settings settings = reader.QueryDefaultSettings();
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 23;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 26;
                 // Tell the reader to include the Protocol Control 
                 // bits in all tag reports. We will need to modify 
                 // the PC bits if we change the length of the EPC. 
@@ -269,7 +272,7 @@ namespace OctaneSdkExamples
                         }
                         else
                         {
-                            if (ascList.Length - 1 > tagSeq)
+                            if (ascList.Count-1 > tagSeq)
                             {
                                 tagSeq++;
                             }

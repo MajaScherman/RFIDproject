@@ -39,7 +39,7 @@ namespace OctaneSdkExamples
                 // Tell the reader not to send tag reports.
                 // We will ask for them.
                 settings.Report.Mode = ReportMode.WaitForQuery;
-                settings.Antennas.GetAntenna(1).TxPowerInDbm = 26;
+                settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
 
                 // Apply the newly modified settings.
                 reader.ApplySettings(settings);
